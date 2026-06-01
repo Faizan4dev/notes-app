@@ -1,23 +1,27 @@
-import React, { useState, useCallback } from 'react';
+import FAB from "@/components/FAB";
+import NoteCard from "@/components/NoteCard";
+import SearchBar from "@/components/SearchBar";
+import { Inter_400Regular, Inter_500Medium } from "@expo-google-fonts/inter";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  useFonts,
+} from "@expo-google-fonts/poppins";
+import { router } from "expo-router";
+import { FileText } from "lucide-react-native";
+import { useCallback, useState } from "react";
+import {
   FlatList,
   RefreshControl,
-} from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { FileText } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { useFonts, Poppins_700Bold, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
-import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
-import SearchBar from '@/components/SearchBar';
-import NoteCard from '@/components/NoteCard';
-import FAB from '@/components/FAB';
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useNotes } from '@/context/NoteContext';
+import { useNotes } from "@/context/NoteContext";
 
 export default function HomeScreen() {
   const [fontsLoaded] = useFonts({
@@ -27,9 +31,28 @@ export default function HomeScreen() {
     Inter_500Medium,
   });
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { notes } = useNotes();
+  const totalWords = notes.reduce(
+    (sum, note) => sum + note.description.split(/\s+/).filter(Boolean).length,
+    0,
+  );
+
+  const categoryCount = notes.reduce(
+    (acc, note) => {
+      acc[note.category] = (acc[note.category] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
+  const topCategory =
+    Object.keys(categoryCount).length > 0
+      ? Object.entries(categoryCount).sort((a, b) => b[1] - a[1])[0][0]
+      : "None";
+
+  const lastUpdated = notes.length > 0 ? notes[0].date : "No notes";
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -38,17 +61,17 @@ export default function HomeScreen() {
     }, 1500);
   }, []);
 
-  const filteredNotes = notes.filter((note) =>
-    note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    note.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    note.category.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredNotes = notes.filter(
+    (note) =>
+      note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      note.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      note.category.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   if (!fontsLoaded) return null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header Area */}
       <View style={styles.header}>
         <View>
@@ -57,13 +80,31 @@ export default function HomeScreen() {
         </View>
         <TouchableOpacity style={styles.avatarContainer}>
           <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>A</Text>
+            <Text style={styles.avatarText}>S</Text>
           </View>
           <View style={styles.onlineBadge} />
         </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
+      <View style={styles.statsCard}>
+        <Text style={styles.statsTitle}>📊 Smart Insights</Text>
+
+        <View style={styles.statsRow}>
+          <Text style={styles.statsLabel}>📝 Total Notes</Text>
+          <Text style={styles.statsValue}>{notes.length}</Text>
+        </View>
+
+        <View style={styles.statsRow}>
+          <Text style={styles.statsLabel}>📂 Most Used Category</Text>
+          <Text style={styles.statsValue}>{topCategory}</Text>
+        </View>
+
+        <View style={styles.statsRow}>
+          <Text style={styles.statsLabel}>📅 Last Updated</Text>
+          <Text style={styles.statsValue}>{lastUpdated}</Text>
+        </View>
+      </View>
       <View style={styles.searchWrapper}>
         <SearchBar
           value={searchQuery}
@@ -77,18 +118,20 @@ export default function HomeScreen() {
         data={filteredNotes}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
-          <NoteCard 
-            item={item} 
-            index={index} 
-            onPress={() => router.push({
-              pathname: '/note-detail',
-              params: {
-                id: item.id,
-                title: item.title,
-                description: item.description,
-                date: item.date
-              }
-            })}
+          <NoteCard
+            item={item}
+            index={index}
+            onPress={() =>
+              router.push({
+                pathname: "/note-detail",
+                params: {
+                  id: item.id,
+                  title: item.title,
+                  description: item.description,
+                  date: item.date,
+                },
+              })
+            }
           />
         )}
         contentContainerStyle={styles.listContent}
@@ -98,25 +141,29 @@ export default function HomeScreen() {
             refreshing={isRefreshing}
             onRefresh={onRefresh}
             tintColor="#6C63FF"
-            colors={['#6C63FF']}
+            colors={["#6C63FF"]}
           />
         }
         ListEmptyComponent={() => (
-          <Animated.View entering={FadeInDown.delay(200)} style={styles.emptyContainer}>
+          <Animated.View
+            entering={FadeInDown.delay(200)}
+            style={styles.emptyContainer}
+          >
             <View style={styles.emptyIconCircle}>
               <FileText size={48} color="#6C63FF" strokeWidth={1.5} />
             </View>
             <Text style={styles.emptyTitle}>No notes found</Text>
             <Text style={styles.emptyDescription}>
-              {searchQuery ? "We couldn't find any notes matching your search." : "Create your first note by tapping the plus button below."}
+              {searchQuery
+                ? "We couldn't find any notes matching your search."
+                : "Create your first note by tapping the plus button below."}
             </Text>
           </Animated.View>
         )}
       />
 
       {/* Floating Action Button */}
-      <FAB onPress={() => router.push('/add-note')} />
-
+      <FAB onPress={() => router.push("/add-note")} />
     </SafeAreaView>
   );
 }
@@ -124,60 +171,60 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FF',
+    backgroundColor: "#F8F9FF",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 16,
   },
   greeting: {
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: "Poppins_700Bold",
     fontSize: 26,
-    color: '#1A1A1A',
+    color: "#1A1A1A",
     marginBottom: 4,
   },
   subtitle: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     fontSize: 14,
-    color: '#666666',
+    color: "#666666",
   },
   avatarContainer: {
-    position: 'relative',
+    position: "relative",
   },
   avatarPlaceholder: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#EBEBFF',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#EBEBFF",
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: '#FFFFFF',
-    shadowColor: '#6C63FF',
+    borderColor: "#FFFFFF",
+    shadowColor: "#6C63FF",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
   avatarText: {
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: "Poppins_600SemiBold",
     fontSize: 20,
-    color: '#6C63FF',
+    color: "#6C63FF",
   },
   onlineBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 2,
     right: 2,
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: "#FFFFFF",
   },
   searchWrapper: {
     marginHorizontal: 24,
@@ -188,8 +235,8 @@ const styles = StyleSheet.create({
     paddingBottom: 100, // Make room for FAB
   },
   emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 60,
     paddingHorizontal: 32,
   },
@@ -197,23 +244,63 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#EBEBFF',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#EBEBFF",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 24,
   },
   emptyTitle: {
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: "Poppins_600SemiBold",
     fontSize: 20,
-    color: '#1A1A1A',
+    color: "#1A1A1A",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emptyDescription: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 15,
-    color: '#666666',
-    textAlign: 'center',
+    color: "#666666",
+    textAlign: "center",
     lineHeight: 22,
+  },
+  statsCard: {
+    backgroundColor: "#FFFFFF",
+    marginHorizontal: 24,
+    marginBottom: 20,
+    padding: 18,
+    borderRadius: 20,
+
+    shadowColor: "#6C63FF",
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+
+  statsTitle: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 16,
+    color: "#1A1A1A",
+    marginBottom: 12,
+  },
+
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+
+  statsLabel: {
+    fontFamily: "Inter_400Regular",
+    color: "#666666",
+    fontSize: 14,
+  },
+  statsValue: {
+    fontFamily: "Poppins_700Bold",
+    color: "#6C63FF",
+    fontSize: 15,
   },
 });
