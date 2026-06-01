@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { Search, X } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import { StyleSheet, TextInput, TouchableOpacity } from "react-native";
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withTiming,
-} from 'react-native-reanimated';
-import { Search, X } from 'lucide-react-native';
+} from "react-native-reanimated";
 
 interface SearchBarProps {
   value: string;
@@ -13,9 +13,13 @@ interface SearchBarProps {
   placeholder?: string;
 }
 
-export default function SearchBar({ value, onChangeText, placeholder = "Search notes..." }: SearchBarProps) {
+export default function SearchBar({
+  value,
+  onChangeText,
+  placeholder = "Search notes...",
+}: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
-  
+
   // Animation values
   const borderOpacity = useSharedValue(0);
   const shadowOpacity = useSharedValue(0);
@@ -41,9 +45,15 @@ export default function SearchBar({ value, onChangeText, placeholder = "Search n
   });
 
   return (
-    <Animated.View style={[styles.container, animatedBorderStyle, animatedShadowStyle]}>
-      <Search size={20} color={isFocused ? '#6C63FF' : '#A0A0A0'} style={styles.icon} />
-      
+    <Animated.View
+      style={[styles.container, animatedBorderStyle, animatedShadowStyle]}
+    >
+      <Search
+        size={20}
+        color={isFocused ? "#6C63FF" : "#A0A0A0"}
+        style={styles.icon}
+      />
+
       <TextInput
         style={styles.input}
         placeholder={placeholder}
@@ -55,9 +65,12 @@ export default function SearchBar({ value, onChangeText, placeholder = "Search n
         autoCapitalize="none"
         autoCorrect={false}
       />
-      
+
       {value.length > 0 && (
-        <TouchableOpacity onPress={() => onChangeText('')} style={styles.clearButton}>
+        <TouchableOpacity
+          onPress={() => onChangeText("")}
+          style={styles.clearButton}
+        >
           <X size={18} color="#A0A0A0" />
         </TouchableOpacity>
       )}
@@ -67,15 +80,15 @@ export default function SearchBar({ value, onChangeText, placeholder = "Search n
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     paddingHorizontal: 16,
     height: 56,
-    borderColor: 'transparent',
+    borderColor: "transparent",
     borderWidth: 1.5,
-    shadowColor: '#6C63FF',
+    shadowColor: "#6C63FF",
     shadowOffset: { width: 0, height: 6 },
     shadowRadius: 12,
   },
@@ -84,10 +97,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     fontSize: 15,
-    color: '#1A1A1A',
-    height: '100%',
+    color: "#1A1A1A",
+    // outlineStyle: "none",
+    height: "100%",
   },
   clearButton: {
     padding: 8,
