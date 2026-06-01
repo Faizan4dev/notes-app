@@ -45,7 +45,7 @@ export default function NoteDetailScreen() {
   const description = note
     ? note.description
     : (params.description as string) ||
-    "Use Poppins for headings, Inter for body. Primary color is #6C63FF. Add more glassmorphism.";
+      "Use Poppins for headings, Inter for body. Primary color is #6C63FF. Add more glassmorphism.";
   const date = note ? note.date : (params.date as string) || "May 31, 2026";
   const [summary, setSummary] = useState("");
   const [loadingSummary, setLoadingSummary] = useState(false);
@@ -80,6 +80,8 @@ export default function NoteDetailScreen() {
     await deleteNote(id);
     router.back();
   };
+
+  const cleanSummary = summary.replace(/\*\*/g, "").replace(/^- /gm, "• ");
 
   if (!fontsLoaded) return null;
 
@@ -142,7 +144,7 @@ export default function NoteDetailScreen() {
             <View style={styles.summaryCard}>
               <Text style={styles.summaryTitle}>✨ AI Summary</Text>
 
-              <Text style={styles.summaryText}>{summary}</Text>
+              <Text style={styles.summaryText}>{cleanSummary}</Text>
             </View>
           ) : null}
 
