@@ -9,7 +9,7 @@ import {
 } from "@expo-google-fonts/poppins";
 import { router } from "expo-router";
 import { FileText } from "lucide-react-native";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   FlatList,
   RefreshControl,
@@ -22,6 +22,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useNotes } from "@/context/NoteContext";
+import { supabase } from "@/lib/supabase"; // Import Supabase to fetch the user
 
 export default function HomeScreen() {
   const [fontsLoaded] = useFonts({
@@ -33,7 +34,31 @@ export default function HomeScreen() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // State to hold the user's name
+  const [userName, setUserName] = useState("User");
+
   const { notes } = useNotes();
+
+  // Fetch the logged-in user's name on mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user?.user_metadata?.full_name) {
+        // Grab just the first name (everything before the first space)
+        const firstName = user.user_metadata.full_name.split(" ")[0];
+        setUserName(firstName);
+      } else if (user?.email) {
+        // Fallback: Use the first part of their email if no name exists
+        const emailName = user.email.split("@")[0];
+        setUserName(emailName);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
   const totalWords = notes.reduce(
     (sum, note) => sum + note.description.split(/\s+/).filter(Boolean).length,
     0,
@@ -75,12 +100,13 @@ export default function HomeScreen() {
       {/* Header Area */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Hello, Alex 👋</Text>
+          <Text style={styles.greeting}>Hello, {userName} 👋</Text>
           <Text style={styles.subtitle}>You have {notes.length} notes</Text>
         </View>
         <TouchableOpacity style={styles.avatarContainer}>
           <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>S</Text>
+            {/* Display the first letter of their name */}
+            <Text style={styles.avatarText}>{userName.charAt(0).toUpperCase()}</Text>
           </View>
           <View style={styles.onlineBadge} />
         </TouchableOpacity>
@@ -88,7 +114,7 @@ export default function HomeScreen() {
 
       {/* Search Bar */}
       <View style={styles.statsCard}>
-        <Text style={styles.statsTitle}>📊 Smart Insights</Text>
+        <Text style={styles.statsTitle}>✨ Smart Insights</Text>
 
         <View style={styles.statsRow}>
           <Text style={styles.statsLabel}>📝 Total Notes</Text>
@@ -96,12 +122,12 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.statsRow}>
-          <Text style={styles.statsLabel}>📂 Most Used Category</Text>
+          <Text style={styles.statsLabel}>🗂️ Most Used Category</Text>
           <Text style={styles.statsValue}>{topCategory}</Text>
         </View>
 
         <View style={styles.statsRow}>
-          <Text style={styles.statsLabel}>📅 Last Updated</Text>
+          <Text style={styles.statsLabel}>⏱️ Last Updated</Text>
           <Text style={styles.statsValue}>{lastUpdated}</Text>
         </View>
       </View>

@@ -45,7 +45,7 @@ export default function NoteDetailScreen() {
   const description = note
     ? note.description
     : (params.description as string) ||
-      "Use Poppins for headings, Inter for body. Primary color is #6C63FF. Add more glassmorphism.";
+    "Use Poppins for headings, Inter for body. Primary color is #6C63FF. Add more glassmorphism.";
   const date = note ? note.date : (params.date as string) || "May 31, 2026";
   const [summary, setSummary] = useState("");
   const [loadingSummary, setLoadingSummary] = useState(false);

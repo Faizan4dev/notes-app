@@ -1,5 +1,6 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/lib/supabase';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 
 export interface Note {
   id: string;
@@ -19,92 +20,124 @@ interface NoteContextType {
 
 const NoteContext = createContext<NoteContextType | undefined>(undefined);
 
-const STORAGE_KEY = '@smart-notes-data';
-
 export const NoteProvider = ({ children }: { children: ReactNode }) => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load notes on mount
-  useEffect(() => {
-    const loadNotes = async () => {
-      try {
-        const storedNotes = await AsyncStorage.getItem(STORAGE_KEY);
-        if (storedNotes) {
-          setNotes(JSON.parse(storedNotes));
-        } else {
-          // Add default mock data if empty
-          const MOCK_NOTES: Note[] = [
-            {
-              id: '1',
-              title: 'Design System Ideas',
-              description: 'Use Poppins for headings, Inter for body. Primary color is #6C63FF. Add more glassmorphism.',
-              date: 'May 31, 2026',
-              category: 'Work',
-            },
-            {
-              id: '2',
-              title: 'Grocery List',
-              description: 'Milk, Eggs, Bread, Avocados, Coffee beans, Oat milk, Bananas.',
-              date: 'May 30, 2026',
-              category: 'Personal',
-            },
-          ];
-          setNotes(MOCK_NOTES);
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_NOTES));
-        }
-      } catch (error) {
-        console.error('Failed to load notes', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadNotes();
-  }, []);
-
-  // Save notes whenever it changes
-  useEffect(() => {
-    if (!isLoading) {
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(notes)).catch((error) => {
-        console.error('Failed to save notes', error);
-      });
-    }
-  }, [notes, isLoading]);
-
-  const addNote = async (noteData: Omit<Note, 'id' | 'date'>) => {
-    const dateObj = new Date();
-    const dateString = dateObj.toLocaleDateString('en-US', {
+  const formatDate = (dateString: string) => {
+    const dateObj = new Date(dateString);
+    return dateObj.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
     });
-    
-    const newNote: Note = {
-      ...noteData,
-      id: Date.now().toString(),
-      date: dateString,
+  };
+
+  const fetchNotes = async (userId: string) => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Fetch error:', error);
+    } else if (data) {
+      const formattedNotes: Note[] = data.map((dbNote) => ({
+        id: dbNote.id,
+        title: dbNote.title,
+        description: dbNote.description,
+        category: dbNote.category,
+        date: formatDate(dbNote.created_at),
+      }));
+      setNotes(formattedNotes);
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) fetchNotes(user.id);
+      else setIsLoading(false);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        fetchNotes(session.user.id);
+      } else {
+        setNotes([]);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
     };
-    
-    setNotes((prevNotes) => [newNote, ...prevNotes]);
+  }, []);
+
+  const addNote = async (noteData: Omit<Note, 'id' | 'date'>) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      Alert.alert("Error", "You must be logged in to save notes.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('notes')
+      .insert([{
+        user_id: user.id,
+        title: noteData.title,
+        description: noteData.description,
+        category: noteData.category,
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      Alert.alert('Database Error', error.message);
+      console.error('Error adding note:', error);
+    } else if (data) {
+      const newNote: Note = {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        date: formatDate(data.created_at),
+      };
+      setNotes((prevNotes) => [newNote, ...prevNotes]);
+    }
   };
 
   const updateNote = async (id: string, updatedData: Omit<Note, 'id' | 'date'>) => {
-    const dateObj = new Date();
-    const dateString = dateObj.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    const { data, error } = await supabase
+      .from('notes')
+      .update({
+        title: updatedData.title,
+        description: updatedData.description,
+        category: updatedData.category,
+      })
+      .eq('id', id)
+      .select()
+      .single();
 
-    setNotes((prevNotes) =>
-      prevNotes.map((note) =>
-        note.id === id ? { ...note, ...updatedData, date: dateString } : note
-      )
-    );
+    if (error) {
+      Alert.alert('Update Error', error.message);
+    } else if (data) {
+      setNotes((prevNotes) =>
+        prevNotes.map((note) =>
+          note.id === id ? { ...note, ...updatedData, date: formatDate(data.created_at) } : note
+        )
+      );
+    }
   };
 
   const deleteNote = async (id: string) => {
-    setNotes((prevNotes) => prevNotes.filter((note) => note.id !== id));
+    const { error } = await supabase.from('notes').delete().eq('id', id);
+    if (error) {
+      Alert.alert('Delete Error', error.message);
+    } else {
+      setNotes((prevNotes) => prevNotes.filter((note) => note.id !== id));
+    }
   };
 
   return (
@@ -116,8 +149,6 @@ export const NoteProvider = ({ children }: { children: ReactNode }) => {
 
 export const useNotes = () => {
   const context = useContext(NoteContext);
-  if (context === undefined) {
-    throw new Error('useNotes must be used within a NoteProvider');
-  }
+  if (context === undefined) throw new Error('useNotes must be used within a NoteProvider');
   return context;
 };
