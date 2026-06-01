@@ -1,5 +1,5 @@
-import { Stack } from 'expo-router';
 import { NoteProvider } from '@/context/NoteContext';
+import { Stack } from 'expo-router';
 
 export default function RootLayout() {
   return (
